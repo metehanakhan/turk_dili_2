@@ -1,0 +1,583 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Edebiyat Çalışma Portalı</title>
+    
+    <!-- Tailwind CSS (CDN) -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Lucide Icons (CDN) -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+
+    <!-- Custom CSS for 3D Animations & Transitions -->
+    <style>
+        .perspective-1000 { perspective: 1000px; }
+        .preserve-3d { transform-style: preserve-3d; }
+        .backface-hidden { backface-visibility: hidden; }
+        .rotate-y-180 { transform: rotateY(180deg); }
+        .transition-transform { transition-property: transform; transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1); transition-duration: 600ms; }
+        
+        /* Custom scrollbar for a cleaner look */
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #f1f5f9; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+
+        /* Hide elements utility */
+        .hidden { display: none !important; }
+    </style>
+</head>
+<body class="bg-slate-50 font-sans text-slate-800 antialiased selection:bg-indigo-200 min-h-screen flex flex-col">
+
+    <!-- App Header & Navigation -->
+    <header class="bg-white border-b border-slate-200 shadow-sm sticky top-0 z-50">
+        <div class="max-w-5xl mx-auto px-4 py-4 flex flex-col sm:flex-row justify-between items-center gap-4">
+            <div class="flex items-center gap-3">
+                <div class="bg-blue-600 p-2 rounded-lg text-white shadow-md">
+                    <i data-lucide="book-open"></i>
+                </div>
+                <div>
+                    <h1 class="text-xl font-bold text-slate-900">Edebiyat Portalı</h1>
+                </div>
+            </div>
+            
+            <!-- Tab Switcher -->
+            <div class="flex bg-slate-100 p-1.5 rounded-xl w-full sm:w-auto">
+                <button onclick="switchTab('quiz')" id="tab-quiz" class="flex-1 sm:flex-none flex items-center justify-center gap-2 px-6 py-2.5 rounded-lg text-sm font-semibold transition-all duration-200 bg-white shadow-sm text-blue-700">
+                    <i data-lucide="file-text" class="w-4 h-4"></i> Test Çöz
+                </button>
+                <button onclick="switchTab('flashcards')" id="tab-flashcards" class="flex-1 sm:flex-none flex items-center justify-center gap-2 px-6 py-2.5 rounded-lg text-sm font-semibold transition-all duration-200 text-slate-500 hover:text-slate-700 hover:bg-slate-200/50">
+                    <i data-lucide="brain" class="w-4 h-4"></i> Bilgi Kartları
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content Area -->
+    <main class="flex-1 w-full relative">
+        
+        <!-- QUIZ SECTION -->
+        <div id="quiz-section" class="max-w-4xl mx-auto py-8 px-4 sm:px-6 transition-opacity duration-300">
+            <header class="mb-8 text-center">
+                <h2 class="text-2xl sm:text-3xl font-bold text-slate-900 mb-2">Deneme Sınavı</h2>
+                <p class="text-slate-600">Öğrendiklerini test etme zamanı!</p>
+            </header>
+
+            <!-- Results Container (Hidden by default) -->
+            <div id="quiz-results" class="hidden bg-white rounded-2xl shadow-lg p-6 mb-8 border border-slate-100 flex-col items-center justify-center animate-fade-in">
+                <div id="quiz-score-circle" class="w-24 h-24 rounded-full flex items-center justify-center mb-4 shadow-inner">
+                    <span id="quiz-score-text" class="text-3xl font-bold"></span>
+                </div>
+                <h2 id="quiz-result-title" class="text-2xl font-bold mb-2 text-center"></h2>
+                <p class="text-slate-600 mb-6 text-center">Testi tamamladın. Aşağıdan yanlışlarına ve doğrularına göz atabilirsin.</p>
+                <button onclick="resetQuiz()" class="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 px-6 rounded-xl transition-colors shadow-md">
+                    <i data-lucide="rotate-ccw"></i> Testi Tekrar Çöz
+                </button>
+            </div>
+
+            <!-- Questions Container -->
+            <div id="questions-container" class="space-y-6"></div>
+
+            <!-- Quiz Footer / Submit Button -->
+            <div id="quiz-footer" class="mt-10 flex flex-col items-center sticky bottom-6 z-10">
+                <div class="bg-white/90 backdrop-blur-md p-4 rounded-2xl shadow-xl border border-slate-200 flex flex-col sm:flex-row items-center gap-4 w-full sm:w-auto">
+                    <div id="unanswered-status" class="text-slate-600 font-medium w-full sm:w-auto text-center">
+                        <!-- Filled by JS -->
+                    </div>
+                    <button onclick="submitQuiz()" class="w-full sm:w-auto bg-slate-900 hover:bg-slate-800 text-white font-medium py-3 px-8 rounded-xl transition-all shadow-md whitespace-nowrap">
+                        Testi Bitir ve Gör
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- FLASHCARDS SECTION (Hidden by default) -->
+        <div id="flashcards-section" class="hidden flex-1 flex flex-col items-center p-4 py-8 max-w-5xl mx-auto w-full transition-opacity duration-300">
+            <div class="w-full flex flex-col sm:flex-row justify-between items-center mb-8 gap-4">
+                <div class="text-center sm:text-left">
+                    <h2 class="text-2xl font-bold text-slate-900">Bilgi Kartları</h2>
+                    <p class="text-sm text-slate-500">Sınavlara hazırlık için hızlı tekrar</p>
+                </div>
+                <div class="flex bg-white shadow-sm border border-slate-200 p-1 rounded-lg w-full sm:w-auto">
+                    <button onclick="setViewMode('card')" id="btn-view-card" class="flex-1 sm:flex-none px-4 py-2 rounded-md text-sm font-medium transition-colors bg-indigo-50 text-indigo-700">
+                        Çalışma Modu
+                    </button>
+                    <button onclick="setViewMode('grid')" id="btn-view-grid" class="flex-1 sm:flex-none flex justify-center items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-colors text-slate-500 hover:text-slate-700">
+                        <i data-lucide="layout-grid" class="w-4 h-4"></i> Tüm Liste
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Card View Mode -->
+            <div id="flashcard-view-card" class="w-full max-w-2xl flex flex-col items-center">
+                <!-- Progress Bar -->
+                <div class="w-full mb-8 px-4">
+                    <div class="flex justify-between text-sm font-semibold text-slate-500 mb-2">
+                        <span id="fc-progress-text">Kart 1</span>
+                        <span id="fc-total-text">Toplam</span>
+                    </div>
+                    <div class="h-2 w-full bg-slate-200 rounded-full overflow-hidden">
+                        <div id="fc-progress-bar" class="h-full bg-indigo-500 transition-all duration-300 ease-out" style="width: 0%"></div>
+                    </div>
+                </div>
+
+                <!-- Flashcard 3D Container -->
+                <div class="relative w-full aspect-[4/3] sm:aspect-[3/2] cursor-pointer group perspective-1000" onclick="flipCard()">
+                    <div id="fc-inner" class="w-full h-full relative preserve-3d transition-transform duration-500 ease-in-out shadow-xl rounded-3xl">
+                        
+                        <!-- Front (Question) -->
+                        <div class="absolute inset-0 backface-hidden w-full h-full bg-white rounded-3xl border-2 border-indigo-100 p-6 sm:p-12 flex flex-col items-center justify-center text-center">
+                            <span class="absolute top-4 left-6 text-indigo-300 font-bold text-4xl sm:text-6xl opacity-30 font-serif">S</span>
+                            <h2 id="fc-front-text" class="text-lg sm:text-2xl md:text-3xl font-medium text-slate-800 leading-relaxed z-10">
+                                Soru Metni
+                            </h2>
+                            <div class="absolute bottom-6 flex items-center gap-2 text-slate-400 text-xs sm:text-sm font-medium animate-pulse">
+                                <i data-lucide="rotate-cw" class="w-4 h-4"></i>
+                                <span>Cevabı görmek için dokun</span>
+                            </div>
+                        </div>
+
+                        <!-- Back (Answer) -->
+                        <div class="absolute inset-0 backface-hidden w-full h-full bg-indigo-600 rounded-3xl border-2 border-indigo-700 p-6 sm:p-12 flex flex-col items-center justify-center text-center text-white" style="transform: rotateY(180deg);">
+                            <span class="absolute top-4 left-6 text-indigo-400 font-bold text-4xl sm:text-6xl opacity-30 font-serif">C</span>
+                            <p id="fc-back-text" class="text-lg sm:text-2xl md:text-3xl font-bold leading-relaxed whitespace-pre-line z-10">
+                                Cevap Metni
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Navigation Controls -->
+                <div class="flex items-center justify-center gap-4 sm:gap-6 mt-8 w-full">
+                    <button onclick="prevCard(event)" id="fc-btn-prev" class="p-3 sm:p-4 rounded-full flex items-center justify-center transition-all bg-white text-indigo-600 shadow-md">
+                        <i data-lucide="chevron-left"></i>
+                    </button>
+                    
+                    <button onclick="flipCard(event)" id="fc-btn-flip" class="flex-1 max-w-[200px] bg-white text-slate-700 font-semibold py-3 px-4 rounded-full shadow-md border border-slate-200 flex justify-center items-center gap-2">
+                        <i data-lucide="rotate-cw" id="fc-icon-flip" class="transition-transform duration-500 w-5 h-5"></i>
+                        <span id="fc-text-flip">Cevabı Gör</span>
+                    </button>
+
+                    <button onclick="nextCard(event)" id="fc-btn-next" class="p-3 sm:p-4 rounded-full flex items-center justify-center transition-all bg-indigo-600 text-white shadow-md">
+                        <i data-lucide="chevron-right"></i>
+                    </button>
+                </div>
+                
+                <p class="mt-6 text-xs text-slate-400 text-center hidden sm:block">
+                    İpucu: Klavye yön tuşlarını (← / →) ve Boşluk (Space) tuşunu kullanabilirsin.
+                </p>
+            </div>
+
+            <!-- Grid View Mode (Hidden by default) -->
+            <div id="flashcard-view-grid" class="hidden w-full">
+                <div id="fc-grid-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    <!-- Filled by JS -->
+                </div>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- JAVASCRIPT LOGIC -->
+    <script>
+        // --- DATA ---
+        const questionsData = [
+            { id: 1, text: "Tiyatro ile ilgili olarak aşağıda verilen bilgilerden hangisi yanlıştır?", options: ["A) İlk tiyatro ürünleri trajedi şeklindedir.", "B) Çağdaş tiyatro tekniğine uygun olarak Türk edebiyatında yazılan ilk önemli eser Namık Kemal'in Vatan Yahut Silistre isimli eseridir.", "C) Tiyatroda şahısların sahneden ayrılıp tekrar sahneye girmelerine meclis ya da sahne adı verilir.", "D) Ortaoyunu sözlü tiyatro ürününün başlıca karakterleri Kavuklu ve Pişekâr'dır.", "E) Dram; gülünç, bayağı, korkunç olaylarla; acıklı, ince ve güzel olayları iç içe anlatan tiyatro çeşididir."], correctAnswer: 1 },
+            { id: 2, text: "Aşağıdakilerden hangisi Geleneksel Türk Tiyatrosu türlerinden biridir?", options: ["A) Pandomim", "B) Komedya", "C) Dram", "D) Tragedya", "E) Karagöz ve Hacivat"], correctAnswer: 4 },
+            { id: 3, text: "Aşağıdakilerden hangisi roman türünün özelliklerinden birisi değildir?", options: ["A) Roman, olmuş ya da olabilecek olayları anlatan uzun edebî bir türdür.", "B) Roman terimi, Roma imparatorluğu içindeki halkların kullandıkları latinceye verilen addır.", "C) Olaylar, bir şahsın ya da birkaç şahsın yazdığı anı defteri biçiminde, şahısların birbirlerine gönderdikleri mektuplar vasıtasıyla anlatılabilir.", "D) Kişi kadrosu hikâye türüne oranla daha kalabalıktır.", "E) İnsan, genellikle hayatın belli ve oldukça kısa bir anı içerisinde izlenir."], correctAnswer: 4 },
+            { id: 4, text: "\"Bu tarz hikâyelere modern hikâye de denir. Her hikâye olaya dayanmaz. Bu tür hikâyelerde merak ögesi ikinci plandadır. Yazar, bu hikâyelerde okuyucuyu sarsan, çarpan, heyecana getiren bir anlatım sergilemez. Onun yerine günlük hayattan bir kesit sunar veya bir insanlık durumunu anlatır.\"\n\nMetinde hakkında bilgi verilen hikâye türü aşağıdakilerden hangisidir?", options: ["A) Olay hikâyesi", "B) Durum hikâyesi", "C) Sosyal hikâye", "D) Ben merkezli hikâye", "E) Klasik vak'a hikâyesi"], correctAnswer: 1 },
+            { id: 5, text: "Türk edebiyatında yazılan ilk Türkçe roman ve bu romanın yazarı aşağıdakilerden hangisidir?", options: ["A) Felatun Bey ve Rakım Efendi- Ahmet Mithat", "B) Kiralık Konak- Yakup Kadri", "C) Taaşşuk-ı Talat ve Fitnat- Şemseddin Sami", "D) İntibah- Namık Kemal", "E) Sinekli Bakkal- Halide Edip"], correctAnswer: 2 },
+            { id: 6, text: "\"Toplumun uygarlık düzeyi yükseldiğinde, çeşitli sebeplerle siyasi ve sosyal birlik ihtiyacı oluştuğunda, milli ruha sahip bir destancı ya da folklorcu bu dağınık destan parçalarını toplar ve böylelikle milli bir destan vücuda gelmiş olur.\"\n\nBu metinde doğal destanın hangi aşaması hakkında bilgi verilmektedir?", options: ["A) Doğuş aşaması", "B) Yayılma aşaması", "C) Saptama aşaması", "D) Görselleme aşaması", "E) Bilgilendirme aşaması"], correctAnswer: 2 },
+            { id: 7, text: "Aşağıdakilerden hangisi İslamiyet'in kabulünden önceki doğal Türk destanlarından biri değildir?", options: ["A) Ergenekon Destanı", "B) Battal Gazi Destanı", "C) Oğuz Kağan Destanı", "D) Alp Er Tunga Destanı", "E) Bozkurt Destanı"], correctAnswer: 1 },
+            { id: 8, text: "Aşağıdakilerden hangisi destanların özelliklerinden biri değildir?", options: ["A) Destanlar millidirler ve milli ülküyü yansıtırlar.", "B) Konuları kahramanlık, yiğitlik, yurt ve millet sevgisi, dostluk ve ölümdür.", "C) Doğal destanların yaratıcıları bellidir.", "D) Destan kahramanları olağanüstü güçlere sahiptir.", "E) Destanlarda olayların ne zaman ve nerede cereyan ettiği kısmen bellidir."], correctAnswer: 2 },
+            { id: 9, text: "\"Şiir yalnız hayallerin görkemi, fikirlerin oturmuşluğu, duyguların coşkunluğuyla oluşturulamaz. Duygular, sanatlar, fikirler başka eserlere taşınır belki ama söyleyiş şiirden koparılamaz. Ahmet Haşim, 'Şiir nesre çevrilmesi mümkün olmayan nazımdır.' sözünü bunu anlatmak için söylemiştir.\"\n\nBu paragrafın anlatımında aşağıda verilen düşünceyi geliştirme yollarından hangisi daha ağır basmaktadır?", options: ["A) Benzetme", "B) Betimleme", "C) Örneklendirme", "D) Tanık Gösterme", "E) İstatistiksel Verilerden Yararlanma"], correctAnswer: 3 },
+            { id: 10, text: "Aşağıdakilerden hangisi başarılı bir kompozisyon yazmak için dikkat edilmesi gereken unsurlar arasında sayılamaz?", options: ["A) Başarılı bir kompozisyon yazmanın yolu öncelikle çok okumaktan geçer.", "B) Hakkında kompozisyon yazılacak konuyu çok iyi anlamak ve her boyutuyla kavrayabilmek gerekir.", "C) Kompozisyon içerisinde yer verilen düşüncelerin birbiriyle çelişmemesine dikkat edilmelidir.", "D) Kompozisyon yazmak doğuştan yetenek gerektirir, sonradan çalışmakla öğrenilemez.", "E) Anlatım bozukluklarına dikkat edilmelidir."], correctAnswer: 3 },
+            { id: 11, text: "\"Çok kötü bir şiirde bile çok iyi söylenmiş, çok çarpıcı bir dize bulunabilir, ama bu durum söz konusu şiiri iyi şiir düzeyine çıkaramaz. Kötü ya da orta halli bir şairin de güzel bir şiir yazdığı, hatta bu şiirin ulusal antolojilerde yer aldığı görülmüştür. Ama bu da o şiirin şairini 'iyi', 'büyük' şair düzeyine çıkartamaz. Geleceğe kalarak biraz yer kazanan, şairin kendisi değil, o şiirdir. Bir şiiri bir ya da birkaç dizesiyle, bir şairi bir ya da birkaç şiiriyle değerlendirmek yanıltır bizi. Bu yanılgı da değerlendirme ölçü ve yöntemini saptırır.\"\n\nBu metin konularına göre hangi paragraf çeşidine örnek olarak verilebilir?", options: ["A) Olay paragrafı", "B) Betimleme paragrafı", "C) Düşünce paragrafı", "D) Çözümleme paragrafı", "E) Bilimsel veri paragrafı"], correctAnswer: 2 },
+            { id: 12, text: "Aşağıdakilerden hangisi \"tutanak\" yazımında dikkat edilmesi gereken hususlar arasında sayılamaz?", options: ["A) Tutanaklarda sağ üst köşeye tarih atılır, ortaya \"Tutanak\" ifadesi yazılır.", "B) Tutanakta olayda konuşması olan kişilerin söyledikleri, söz alış sıralarına göre eksiksiz yazılmalıdır.", "C) Tutanakta kişisel görüş ve yorumlara yer verilmez.", "D) Tutanak metni tamamlandıktan sonra olayda yer alan ilgili kişilere okutulup imzalatılır.", "E) Tutanağı hazırlayan kişinin alanında uzman olması gerekir."], correctAnswer: 4 },
+            { id: 13, text: "Aşağıda dilekçe yazımı ile ilgili verilen bilgilerden hangisi yanlıştır?", options: ["A) Yazı bitirildikten sonra sol alt köşeye dilekçeyi yazan kişi önce imzasını atmalı, imzanın altına da ad ve soyadını yazmalıdır.", "B) Anlatılmak istenen dilek ya da şikayet kısa ve net biçimde belirtilmeli ve dilekçe, ciddi ve saygılı bir üslupla yazılmalıdır.", "C) Dilekçenin yanında konuyla ilgili belgeler de varsa, bu belgeler adresten sonra \"Ek 1, Ek 2, ...\" şeklinde numaralandırılarak açıkça yazılmalıdır.", "D) Dilekçenin sunulacağı makamın adı ve yeri açık bir şekilde belirtilmelidir. Kısaltma yapılmamalıdır. Makam adı büyük harflerle yazılır.", "E) Dilekçede mutlaka tarih yer almalıdır. Yapılacak resmî işlemin tarihinin bilinmesi önemlidir."], correctAnswer: 0 },
+            { id: 14, text: "Türk edebiyatında ilk makale örneği ve bu makalenin yazarı aşağıdakilerden hangisidir?", options: ["A) Eylül- Mehmet Rauf", "B) Kaşağı- Ömer Seyfettin", "C) Tercüman-ı Ahval Mukaddimesi- Şinasi", "D) Cezmi- Namık Kemal", "E) Araba Sevdası- Recaizade Mahmut Ekrem"], correctAnswer: 2 },
+            { id: 15, text: "\"Herhangi bir düşünceyi destekleyen, savunan; bir konuda bilgi veren, bu konuyu nesnel, bilimsel bir tavırla inceleyen gazete ya da dergi yazılarına denir. İddia ve ispat yazısıdır. Kişisel yargılardan uzak durulmalıdır.\"\n\nYukarıda tanımı yapılan fikri yazı türü aşağıdakilerden hangisidir?", options: ["A) Makale", "B) Bildiri", "C) Deneme", "D) Eleştiri", "E) Sohbet"], correctAnswer: 0 },
+            { id: 16, text: "Bildiri (tebliğ) ile ilgi aşağıda söylenenlerden hangisi yanlıştır?", options: ["A) Bilim, fikir ve sanat adamlarının kendi alanlarıyla ilgili bir konuda, akademik amaçlı bir toplantıda sunmak üzere bilimsel bir üslupla hazırladıkları yazı çeşididir.", "B) Günübirlik yazılardır ve gündem değişince bildiriler de etkisini kaybeder.", "C) Bir toplantıda sunulan bildiriler, sonradan bir araya getirilerek kitaplaştırılır.", "D) Sempozyumlarda bildirilerini sunmaları için konuşmacılara 15-20 dakika süre verilir.", "E) Bildiride kullanılan dil, uzmanlık alanının gerektirdiği terimler ve ifadeleri içerir."], correctAnswer: 1 },
+            { id: 17, text: "Tarihin dilinden düşmez bu destan,\nNehirler gazidir, dağlar kahraman,\nHer taşı bir yakut olan bu vatan,\nCan verme sırrına erenlerindir... (Orhan Şaik Gökyay)\n\nBu dizelerde hangi tür şiire özgü özellikler ağır basmaktadır?", options: ["A) Lirik Şiir", "B) Epik Şiir", "C) Didaktik Şiir", "D) Satirik Şiir", "E) Pastoral Şiir"], correctAnswer: 1 },
+            { id: 18, text: "Aşağıdakilerden hangisi \"Divan Şiiri Geleneği\"nin özellikleri arasında yer almaz?", options: ["A) Nazım birimi dörtlüktür.", "B) Ölçü olarak aruz ölçüsü kullanılmıştır.", "C) Şiirlerde çoğunlukla aşk, tabiat, din, tasavvuf gibi bireysel mevzular ele alınmıştır.", "D) Sanatlı ve yoğun bir dil hakimdir.", "E) Arapça ve Farsça sözcük ve tamlamalara sıklıkla rastlanır."], correctAnswer: 0 },
+            { id: 19, text: "Shakespeare'in Yanlışlıklar Komedisi isimli eseri hangi tür komediye örnek olarak gösterilebilir?", options: ["A) Eleştirel komedi", "B) Töre komedisi", "C) Karakter komedisi", "D) Geleneksel komedi", "E) Entrika komedisi"], correctAnswer: 4 },
+            { id: 20, text: "Aşağıdakilerden hangisi \"Meddahlık\" tiyatro türünün özelliklerinden biri değildir?", options: ["A) Meddahlık, hikâye anlatma ve taklit yapma sanatıdır.", "B) Perdesi, sahnesi, dekoru, esvapları ve şahısları bir tek sanatkârda toplanan unsurları basit ve sade bir temaşadır.", "C) Meddahın aksesuarını bir mendil ile bir sopa/baston teşkil eder.", "D) Yeni Dünya adı verilen basit bir paravan, bir masa ve arkalıksız iki iskemle dekorunu oluşturur.", "E) Meddah hikâyesine klişeleşmiş bir söz ile başlar."], correctAnswer: 3 }
+        ];
+
+        const flashcardsData = [
+            { id: 1, front: "Türk edebiyatında yazılan ilk Türkçe roman ve yazarı kimdir?", back: "Taaşşuk-ı Talat ve Fitnat\n(Şemseddin Sami)" },
+            { id: 2, front: "Sadece bir olaya dayanmayan, merak ögesinin ikinci planda olduğu ve günlük hayattan bir kesit sunan hikâye türü nedir?", back: "Durum hikâyesi\n(Kesit hikâyesi)" },
+            { id: 3, front: "Doğal destanlarda, dağınık destan parçalarının destancı veya folklorcu tarafından toplanıp milli bir destan haline getirildiği aşama hangisidir?", back: "Saptama (Derleme) Aşaması" },
+            { id: 4, front: "İslamiyet'in kabulünden önceki doğal Türk destanlarına hangi destanlar örnek verilebilir?", back: "Ergenekon Destanı\nOğuz Kağan Destanı\nAlp Er Tunga Destanı\nBozkurt Destanı\n(Not: Battal Gazi Destanı İslami dönemdir.)" },
+            { id: 5, front: "Doğal destanların yaratıcıları belli midir?", back: "Hayır, doğal destanların yaratıcıları belli değildir (anonimdir)." },
+            { id: 6, front: "Türk edebiyatında ilk makale örneği nedir ve kim tarafından yazılmıştır?", back: "Tercüman-ı Ahval Mukaddimesi\n(Şinasi)" },
+            { id: 7, front: "Herhangi bir düşünceyi savunan, bilgi veren, nesnel ve bilimsel tavırla incelenen 'iddia ve ispat' yazı türü nedir?", back: "Makale" },
+            { id: 8, front: "Bilim, fikir ve sanat adamlarının kendi alanlarıyla ilgili bir konuda, akademik amaçlı bir toplantıda (sempozyum vb.) sunmak üzere hazırladıkları bilimsel yazı çeşidi nedir?", back: "Bildiri (Tebliğ)" },
+            { id: 9, front: "\"Tarihin dilinden düşmez bu destan,\nNehirler gazidir, dağlar kahraman...\"\ndizelerinde hangi şiir türünün özellikleri ağır basmaktadır?", back: "Epik Şiir\n(Kahramanlık ve yurt sevgisi işlendiği için)" },
+            { id: 10, front: "Divan Şiiri Geleneği'nin genel özellikleri nelerdir?", back: "• Aruz ölçüsü kullanılır.\n• Sanatlı ve yoğun bir dil hakimdir.\n• Arapça ve Farsça sözcükler sıklıkla yer alır.\n• Nazım birimi çoğunlukla beyittir (dörtlük değil)." },
+            { id: 11, front: "Shakespeare'in 'Yanlışlıklar Komedisi' isimli eseri hangi komedi türüne örnek olarak gösterilir?", back: "Entrika Komedisi" },
+            { id: 12, front: "Meddahlık tiyatro türünün temel özellikleri ve aksesuarları nelerdir?", back: "Hikâye anlatma ve taklit yapma sanatıdır. Tüm unsurlar tek bir sanatkârda toplanır. Aksesuar olarak sadece bir mendil ve sopa (baston) kullanılır.\n(Not: 'Yeni Dünya' paravanı Ortaoyunu'na aittir.)" },
+            { id: 13, front: "Tutanak yazımında dikkat edilmesi gereken en önemli kurallar nelerdir?", back: "• Sağ üst köşeye tarih atılır.\n• Konuşmalar eksiksiz yazılır.\n• Kişisel görüş ve yorumlara yer VERİLMEZ.\n• Metin tamamlanınca ilgili kişilere okutulup imzalatılır." },
+            { id: 14, front: "Dilekçe yazımında, yazan kişinin imzası ile ad ve soyadı kâğıdın neresine yazılmalıdır?", back: "Yazı bitirildikten sonra SAĞ ALT köşeye yazılmalıdır. (Sol alta yazılmaz)." },
+            { id: 15, front: "Roman türünde kişi kadrosu, hikâye türüne oranla nasıldır?", back: "Hikâye türüne oranla çok daha kalabalıktır." }
+        ];
+
+        // --- GLOBAL STATES ---
+        let activeTab = 'quiz';
+        
+        // Quiz state
+        let quizAnswers = {};
+        let isQuizSubmitted = false;
+        
+        // Flashcards state
+        let fcIndex = 0;
+        let isFlipped = false;
+        let isAnimating = false;
+        let fcViewMode = 'card';
+
+        // --- INITIALIZATION ---
+        window.onload = () => {
+            renderQuiz();
+            initFlashcardsGrid();
+            updateFlashcardUI();
+            lucide.createIcons();
+        };
+
+        // --- TABS LOGIC ---
+        function switchTab(tab) {
+            activeTab = tab;
+            
+            const btnQuiz = document.getElementById('tab-quiz');
+            const btnFlashcards = document.getElementById('tab-flashcards');
+            const secQuiz = document.getElementById('quiz-section');
+            const secFlashcards = document.getElementById('flashcards-section');
+
+            if (tab === 'quiz') {
+                btnQuiz.className = "flex-1 sm:flex-none flex items-center justify-center gap-2 px-6 py-2.5 rounded-lg text-sm font-semibold transition-all duration-200 bg-white shadow-sm text-blue-700";
+                btnFlashcards.className = "flex-1 sm:flex-none flex items-center justify-center gap-2 px-6 py-2.5 rounded-lg text-sm font-semibold transition-all duration-200 text-slate-500 hover:text-slate-700 hover:bg-slate-200/50";
+                secQuiz.classList.remove('hidden');
+                secFlashcards.classList.add('hidden');
+            } else {
+                btnQuiz.className = "flex-1 sm:flex-none flex items-center justify-center gap-2 px-6 py-2.5 rounded-lg text-sm font-semibold transition-all duration-200 text-slate-500 hover:text-slate-700 hover:bg-slate-200/50";
+                btnFlashcards.className = "flex-1 sm:flex-none flex items-center justify-center gap-2 px-6 py-2.5 rounded-lg text-sm font-semibold transition-all duration-200 bg-white shadow-sm text-indigo-700";
+                secQuiz.classList.add('hidden');
+                secFlashcards.classList.remove('hidden');
+            }
+        }
+
+        // --- QUIZ LOGIC ---
+        function renderQuiz() {
+            const container = document.getElementById('questions-container');
+            container.innerHTML = '';
+
+            questionsData.forEach((q, index) => {
+                const qDiv = document.createElement('div');
+                qDiv.id = `q-${q.id}`;
+                qDiv.className = `bg-white rounded-2xl p-5 sm:p-8 shadow-sm border border-slate-200 transition-all duration-300`;
+                
+                let html = `
+                    <div class="flex gap-3 sm:gap-4 mb-4 sm:mb-6">
+                        <div class="flex-shrink-0 w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-blue-100 text-blue-700 font-bold flex items-center justify-center shadow-sm text-sm sm:text-base">
+                            ${index + 1}
+                        </div>
+                        <h3 class="text-base sm:text-lg font-medium text-slate-800 pt-1 whitespace-pre-line leading-relaxed">
+                            ${q.text}
+                        </h3>
+                    </div>
+                    <div class="space-y-3 pl-0 sm:pl-14" id="options-${q.id}">
+                `;
+
+                q.options.forEach((opt, optIndex) => {
+                    html += `
+                        <div id="opt-${q.id}-${optIndex}" onclick="selectQuizOption(${q.id}, ${optIndex})" class="flex items-center p-3 sm:p-4 rounded-xl border-2 cursor-pointer transition-all border-slate-200 hover:border-blue-300 hover:bg-slate-50">
+                            <div id="dot-${q.id}-${optIndex}" class="w-5 h-5 rounded-full border border-slate-300 flex-shrink-0 mr-3 sm:mr-4 flex items-center justify-center"></div>
+                            <span class="flex-1 font-medium text-sm sm:text-base">${opt}</span>
+                            <div id="icon-${q.id}-${optIndex}" class="hidden ml-auto"></div>
+                        </div>
+                    `;
+                });
+
+                html += `</div>`;
+                qDiv.innerHTML = html;
+                container.appendChild(qDiv);
+            });
+            updateQuizStatus();
+            lucide.createIcons();
+        }
+
+        function selectQuizOption(qId, optIndex) {
+            if (isQuizSubmitted) return;
+            quizAnswers[qId] = optIndex;
+            updateQuizUI();
+        }
+
+        function updateQuizUI() {
+            questionsData.forEach(q => {
+                const qContainer = document.getElementById(`q-${q.id}`);
+                const userAnswer = quizAnswers[q.id];
+                const isAnswered = userAnswer !== undefined;
+                const isCorrect = isAnswered && userAnswer === q.correctAnswer;
+
+                // Parent styling
+                if (isQuizSubmitted) {
+                    qContainer.className = `bg-white rounded-2xl p-5 sm:p-8 shadow-sm border transition-all duration-300 ${isCorrect ? 'border-green-300 bg-green-50/30' : 'border-red-300 bg-red-50/30'}`;
+                } else {
+                    qContainer.className = `bg-white rounded-2xl p-5 sm:p-8 border transition-all duration-300 ${isAnswered ? 'border-blue-300 shadow-md' : 'border-slate-200 shadow-sm'}`;
+                }
+
+                // Options styling
+                q.options.forEach((_, optIndex) => {
+                    const optDiv = document.getElementById(`opt-${q.id}-${optIndex}`);
+                    const dotDiv = document.getElementById(`dot-${q.id}-${optIndex}`);
+                    const iconDiv = document.getElementById(`icon-${q.id}-${optIndex}`);
+                    
+                    const isSelected = userAnswer === optIndex;
+                    const isCorrectOption = q.correctAnswer === optIndex;
+
+                    // Reset classes
+                    optDiv.className = "flex items-center p-3 sm:p-4 rounded-xl border-2 transition-all " + (isQuizSubmitted ? "cursor-default " : "cursor-pointer ");
+                    dotDiv.className = "w-5 h-5 rounded-full border flex-shrink-0 mr-3 sm:mr-4 flex items-center justify-center ";
+                    dotDiv.innerHTML = "";
+                    iconDiv.className = "hidden ml-auto";
+                    iconDiv.innerHTML = "";
+
+                    if (isQuizSubmitted) {
+                        if (isCorrectOption) {
+                            optDiv.className += "border-green-500 bg-green-100 text-green-800 shadow-sm";
+                            dotDiv.className += "border-green-500 bg-green-500";
+                            dotDiv.innerHTML = '<div class="w-2 h-2 bg-white rounded-full"></div>';
+                            iconDiv.className = "ml-auto text-green-600";
+                            iconDiv.innerHTML = '<i data-lucide="check-circle-2" class="w-5 h-5"></i>';
+                        } else if (isSelected && !isCorrectOption) {
+                            optDiv.className += "border-red-500 bg-red-100 text-red-800";
+                            dotDiv.className += "border-red-500 bg-red-500";
+                            iconDiv.className = "ml-auto text-red-600";
+                            iconDiv.innerHTML = '<i data-lucide="x-circle" class="w-5 h-5"></i>';
+                        } else {
+                            optDiv.className += "border-slate-200 opacity-50";
+                            dotDiv.className += "border-slate-300";
+                        }
+                    } else {
+                        if (isSelected) {
+                            optDiv.className += "border-blue-500 bg-blue-50 text-blue-800 shadow-sm";
+                            dotDiv.className += "border-blue-500 bg-blue-500";
+                            dotDiv.innerHTML = '<div class="w-2 h-2 bg-white rounded-full"></div>';
+                        } else {
+                            optDiv.className += "border-slate-200 hover:border-blue-300 hover:bg-slate-50";
+                            dotDiv.className += "border-slate-300";
+                        }
+                    }
+                });
+            });
+            updateQuizStatus();
+            lucide.createIcons();
+        }
+
+        function updateQuizStatus() {
+            const statusDiv = document.getElementById('unanswered-status');
+            if (isQuizSubmitted) {
+                document.getElementById('quiz-footer').classList.add('hidden');
+                return;
+            }
+            
+            const unanswered = questionsData.length - Object.keys(quizAnswers).length;
+            if (unanswered > 0) {
+                statusDiv.innerHTML = `<span class="flex items-center justify-center sm:justify-start gap-2 text-amber-600"><i data-lucide="alert-circle" class="w-5 h-5"></i> ${unanswered} soru boş</span>`;
+            } else {
+                statusDiv.innerHTML = `<span class="flex items-center justify-center sm:justify-start gap-2 text-green-600"><i data-lucide="check-circle-2" class="w-5 h-5"></i> Tüm sorular yanıtlandı</span>`;
+            }
+            lucide.createIcons();
+        }
+
+        function submitQuiz() {
+            let score = 0;
+            questionsData.forEach(q => {
+                if (quizAnswers[q.id] === q.correctAnswer) score++;
+            });
+            isQuizSubmitted = true;
+            
+            // Setup results card
+            const resultsDiv = document.getElementById('quiz-results');
+            const scoreCircle = document.getElementById('quiz-score-circle');
+            const scoreText = document.getElementById('quiz-score-text');
+            const resultTitle = document.getElementById('quiz-result-title');
+            
+            resultsDiv.classList.remove('hidden');
+            resultsDiv.classList.add('flex');
+            
+            if (score >= 10) {
+                scoreCircle.style.backgroundColor = '#dcfce7';
+                scoreText.style.color = '#166534';
+            } else {
+                scoreCircle.style.backgroundColor = '#fee2e2';
+                scoreText.style.color = '#991b1b';
+            }
+            
+            scoreText.innerText = `${score}/${questionsData.length}`;
+            resultTitle.innerText = score >= 15 ? 'Harika İş Çıkardın!' : score >= 10 ? 'Tebrikler, İyi Geçti!' : 'Biraz Daha Çalışmalısın';
+            
+            updateQuizUI();
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        function resetQuiz() {
+            quizAnswers = {};
+            isQuizSubmitted = false;
+            document.getElementById('quiz-results').classList.add('hidden');
+            document.getElementById('quiz-results').classList.remove('flex');
+            document.getElementById('quiz-footer').classList.remove('hidden');
+            updateQuizUI();
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+
+        // --- FLASHCARDS LOGIC ---
+        function setViewMode(mode) {
+            fcViewMode = mode;
+            const btnCard = document.getElementById('btn-view-card');
+            const btnGrid = document.getElementById('btn-view-grid');
+            const viewCard = document.getElementById('flashcard-view-card');
+            const viewGrid = document.getElementById('flashcard-view-grid');
+
+            if (mode === 'card') {
+                btnCard.className = "flex-1 sm:flex-none px-4 py-2 rounded-md text-sm font-medium transition-colors bg-indigo-50 text-indigo-700";
+                btnGrid.className = "flex-1 sm:flex-none flex justify-center items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-colors text-slate-500 hover:text-slate-700";
+                viewCard.classList.remove('hidden');
+                viewGrid.classList.add('hidden');
+            } else {
+                btnCard.className = "flex-1 sm:flex-none px-4 py-2 rounded-md text-sm font-medium transition-colors text-slate-500 hover:text-slate-700";
+                btnGrid.className = "flex-1 sm:flex-none flex justify-center items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-colors bg-indigo-50 text-indigo-700";
+                viewCard.classList.add('hidden');
+                viewGrid.classList.remove('hidden');
+            }
+        }
+
+        function updateFlashcardUI() {
+            const card = flashcardsData[fcIndex];
+            
+            // Update Texts
+            document.getElementById('fc-front-text').innerText = card.front;
+            document.getElementById('fc-back-text').innerText = card.back;
+            document.getElementById('fc-progress-text').innerText = `Kart ${fcIndex + 1}`;
+            document.getElementById('fc-total-text').innerText = `${flashcardsData.length} Toplam`;
+            
+            // Update Progress Bar
+            const progress = ((fcIndex + 1) / flashcardsData.length) * 100;
+            document.getElementById('fc-progress-bar').style.width = `${progress}%`;
+
+            // Update Buttons State
+            const btnPrev = document.getElementById('fc-btn-prev');
+            const btnNext = document.getElementById('fc-btn-next');
+            
+            if (fcIndex === 0) {
+                btnPrev.className = "p-3 sm:p-4 rounded-full flex items-center justify-center transition-all bg-slate-200 text-slate-400 cursor-not-allowed";
+                btnPrev.disabled = true;
+            } else {
+                btnPrev.className = "p-3 sm:p-4 rounded-full flex items-center justify-center transition-all bg-white text-indigo-600 shadow-md hover:bg-indigo-50 hover:scale-105 active:scale-95";
+                btnPrev.disabled = false;
+            }
+
+            if (fcIndex === flashcardsData.length - 1) {
+                btnNext.className = "p-3 sm:p-4 rounded-full flex items-center justify-center transition-all bg-slate-200 text-slate-400 cursor-not-allowed";
+                btnNext.disabled = true;
+            } else {
+                btnNext.className = "p-3 sm:p-4 rounded-full flex items-center justify-center transition-all bg-indigo-600 text-white shadow-md hover:bg-indigo-700 hover:scale-105 active:scale-95";
+                btnNext.disabled = false;
+            }
+        }
+
+        function flipCard(event) {
+            if (event) event.stopPropagation();
+            if (isAnimating) return;
+            
+            isAnimating = true;
+            isFlipped = !isFlipped;
+            
+            const inner = document.getElementById('fc-inner');
+            const icon = document.getElementById('fc-icon-flip');
+            const text = document.getElementById('fc-text-flip');
+
+            if (isFlipped) {
+                inner.classList.add('rotate-y-180');
+                icon.classList.add('rotate-180');
+                text.innerText = "Soruyu Gör";
+            } else {
+                inner.classList.remove('rotate-y-180');
+                icon.classList.remove('rotate-180');
+                text.innerText = "Cevabı Gör";
+            }
+
+            setTimeout(() => { isAnimating = false; }, 600);
+        }
+
+        function resetFlip() {
+            if (isFlipped) {
+                isFlipped = false;
+                document.getElementById('fc-inner').classList.remove('rotate-y-180');
+                document.getElementById('fc-icon-flip').classList.remove('rotate-180');
+                document.getElementById('fc-text-flip').innerText = "Cevabı Gör";
+            }
+        }
+
+        function nextCard(event) {
+            if (event) event.stopPropagation();
+            if (fcIndex < flashcardsData.length - 1) {
+                resetFlip();
+                setTimeout(() => {
+                    fcIndex++;
+                    updateFlashcardUI();
+                }, 150);
+            }
+        }
+
+        function prevCard(event) {
+            if (event) event.stopPropagation();
+            if (fcIndex > 0) {
+                resetFlip();
+                setTimeout(() => {
+                    fcIndex--;
+                    updateFlashcardUI();
+                }, 150);
+            }
+        }
+
+        function initFlashcardsGrid() {
+            const container = document.getElementById('fc-grid-container');
+            let html = '';
+            flashcardsData.forEach((card, index) => {
+                html += `
+                    <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 flex flex-col">
+                        <div class="text-xs font-bold text-indigo-500 mb-3 bg-indigo-50 inline-block px-2 py-1 rounded w-fit">
+                            KART ${index + 1}
+                        </div>
+                        <h3 class="text-sm font-semibold text-slate-800 mb-4 flex-1">
+                            ${card.front}
+                        </h3>
+                        <div class="pt-4 border-t border-slate-100">
+                            <p class="text-sm text-indigo-700 font-medium whitespace-pre-line">
+                                ${card.back}
+                            </p>
+                        </div>
+                    </div>
+                `;
+            });
+            container.innerHTML = html;
+        }
+
+        // --- KEYBOARD BINDINGS ---
+        document.addEventListener('keydown', (e) => {
+            if (activeTab === 'flashcards' && fcViewMode === 'card') {
+                if (e.key === 'ArrowRight') nextCard();
+                else if (e.key === 'ArrowLeft') prevCard();
+                else if (e.key === ' ' || e.key === 'Enter') {
+                    e.preventDefault();
+                    flipCard();
+                }
+            }
+        });
+
+    </script>
+</body>
+</html>
